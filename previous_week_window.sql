@@ -2,33 +2,14 @@ WITH
     payments
 AS (
     SELECT
-        p.void_date,
-        p.used_date, 
-        p.issue_date,
-        p.settlement_date,
-        p.delivery_method,
-        p.is_success,
-        p.amount,
-        p.status,
-        count(s.vcard_info_id) AS number_of_swipes,
-        sum(s.settled_amount) AS settled_amount
-    FROM
-        payment_fct p
-    JOIN
-        settlement_fct s
-        USING (id)
-    WHERE
-        True
-        AND p.issue_date >= date '2023-01-01'
-        AND s.type IN (1, 2, 3)
-    GROUP BY
-        1, 2, 3, 4, 5, 6, 7,8
+            ...
+
     ),
     issued
 AS (
     SELECT
         issue_date AS date,
-        delivery_method,
+        type,
         SUM(amount) AS issued
     FROM 
         payments
@@ -41,7 +22,7 @@ AS (
 AS (
     SELECT
         used_date AS date,
-        delivery_method,
+        type,
         SUM(amount) AS swiped
     FROM 
         payments
@@ -51,11 +32,11 @@ AS (
     GROUP BY 
         1, 2
     ),
-    voided_tpv
+    voided_volume
 AS (
     SELECT
         void_date AS date,
-        delivery_method,
+        type,
         SUM(amount) AS void
     FROM 
         payments
@@ -65,12 +46,12 @@ AS (
     GROUP BY 
         1, 2
     ),
-    settled_tpv
+    processed_volume
 AS (
     SELECT
         settlement_date AS date,
-        delivery_method,
-        SUM(amount) AS settled
+        type,
+        SUM(amount) AS processed
     FROM 
         payments
     WHERE 
@@ -83,82 +64,82 @@ AS (
 AS (
     SELECT
         date,
-        delivery_method, 
+        type, 
         issued,
         swiped,
         void, 
-        settled,
+        processed,
         SUM(issued) OVER (
-            PARTITION BY EXTRACT(DOW FROM date), delivery_method
+            PARTITION BY EXTRACT(DOW FROM date), type
             ORDER BY date
             ROWS BETWEEN 1 PRECEDING AND 1 PRECEDING
         ) AS issued_over_1,
         SUM(issued) OVER (
-            PARTITION BY EXTRACT(DOW FROM date), delivery_method
+            PARTITION BY EXTRACT(DOW FROM date), type
             ORDER BY date
             ROWS BETWEEN 4 PRECEDING AND 1 PRECEDING
         ) AS issued_over_4,
         SUM(issued) OVER (
-            PARTITION BY EXTRACT(DOW FROM date), delivery_method
+            PARTITION BY EXTRACT(DOW FROM date), type
             ORDER BY date
             ROWS BETWEEN 12 PRECEDING AND 1 PRECEDING
         ) AS issued_over_12,
         SUM(swiped) OVER (
-            PARTITION BY EXTRACT(DOW FROM date), delivery_method
+            PARTITION BY EXTRACT(DOW FROM date), type
             ORDER BY date
             ROWS BETWEEN 1 PRECEDING AND 1 PRECEDING
         ) AS swiped_over_1,
         SUM(swiped) OVER (
-            PARTITION BY EXTRACT(DOW FROM date), delivery_method
+            PARTITION BY EXTRACT(DOW FROM date), type
             ORDER BY date
             ROWS BETWEEN 4 PRECEDING AND 1 PRECEDING
         ) AS swiped_over_4,
         SUM(swiped) OVER (
-            PARTITION BY EXTRACT(DOW FROM date), delivery_method
+            PARTITION BY EXTRACT(DOW FROM date), type
             ORDER BY date
             ROWS BETWEEN 12 PRECEDING AND 1 PRECEDING
         ) AS swiped_over_12,
         SUM(void) OVER (
-            PARTITION BY EXTRACT(DOW FROM date), delivery_method
+            PARTITION BY EXTRACT(DOW FROM date), type
             ORDER BY date
             ROWS BETWEEN 1 PRECEDING AND 1 PRECEDING
         ) AS void_over_1,
         SUM(void) OVER (
-            PARTITION BY EXTRACT(DOW FROM date), delivery_method
+            PARTITION BY EXTRACT(DOW FROM date), type
             ORDER BY date
             ROWS BETWEEN 4 PRECEDING AND 1 PRECEDING
         ) AS void_over_4,
         SUM(void) OVER (
-            PARTITION BY EXTRACT(DOW FROM date), delivery_method
+            PARTITION BY EXTRACT(DOW FROM date), type
             ORDER BY date
             ROWS BETWEEN 12 PRECEDING AND 1 PRECEDING
         ) AS void_over_12,
-        SUM(settled) OVER (
-            PARTITION BY EXTRACT(DOW FROM date), delivery_method
+        SUM(processed) OVER (
+            PARTITION BY EXTRACT(DOW FROM date), type
             ORDER BY date
             ROWS BETWEEN 1 PRECEDING AND 1 PRECEDING
-        ) AS settled_over_1,
-        SUM(settled) OVER (
-            PARTITION BY EXTRACT(DOW FROM date), delivery_method
+        ) AS processed_over_1,
+        SUM(processed) OVER (
+            PARTITION BY EXTRACT(DOW FROM date), type
             ORDER BY date
             ROWS BETWEEN 4 PRECEDING AND 1 PRECEDING
-        ) AS settled_over_4,
-        SUM(settled) OVER (
-            PARTITION BY EXTRACT(DOW FROM date), delivery_method
+        ) AS processed_over_4,
+        SUM(processed) OVER (
+            PARTITION BY EXTRACT(DOW FROM date), type
             ORDER BY date
             ROWS BETWEEN 12 PRECEDING AND 1 PRECEDING       
-        ) settled_over_12
+        ) processed_over_12
     FROM
-        issued_tpv
+        issued_volume
     FULL JOIN 
-        swiped_tpv
-        USING (date, delivery_method)
+        swiped_volume
+        USING (date, type)
     FULL JOIN 
-        voided_tpv
-        USING (date, delivery_method)
+        voided_volume
+        USING (date, type)
     FULL JOIN 
-        settled_tpv
-        USING (date, delivery_method)
+        processed_volume
+        USING (date, type)
     ),
     dates 
 AS (-- extract previous week data 
