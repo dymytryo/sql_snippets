@@ -3,7 +3,7 @@ SELECT
     column_name,
     COUNT(*) AS occurences
 FROM
-    postgres_db.information_schema.columns"
+    postgres_db.information_schema.columns
 WHERE 
     True 
 GROUP BY 
