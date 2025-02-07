@@ -13,7 +13,7 @@ FROM
         True
         AND isActive = 1
      ) m TABLESAMPLE
-                    BERNOULLI (10)      
+                    BERNOULLI (10) -- this will fetch ~10% of rows
 JOIN
     bill b
     ON b.merchantId = m.id
